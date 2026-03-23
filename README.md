@@ -42,10 +42,3 @@ python -c "import data_loader,crawler,feature_builder,news_feature_extractor,age
 - `env_spec.md`
 - `backtest_rules.md`
 
-
-## 視覺化架構圖
-- `architecture_flow.html`：完整系統流程架構與方法論（可直接用瀏覽器開啟）。
-
-## 訓練前驗證與方法論
-- `training_protocol.md`：RL 訓練完整流程、風險與失敗模式對策。
-- `validate_env.py`：訓練前環境驗證檢查（leakage/execution/accounting/cost/drawdown/invalid action）。
