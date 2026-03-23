@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quant RL MVP 系統流程架構圖</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: #f6f8fb;
+      color: #1f2937;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1320px;
+      margin: 24px auto;
+      padding: 0 16px 24px;
+    }
+    h1, h2 {
+      margin: 0 0 8px;
+    }
+    .subtitle {
+      margin-bottom: 16px;
+      color: #374151;
+    }
+    .panel {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 8px;
+    }
+    .tag {
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 14px;
+      border: 1px solid transparent;
+    }
+    .t-data { background: #ecfeff; border-color: #99f6e4; }
+    .t-feature { background: #eef2ff; border-color: #c7d2fe; }
+    .t-agent { background: #f5f3ff; border-color: #ddd6fe; }
+    .t-sim { background: #fff7ed; border-color: #fed7aa; }
+    .t-train { background: #f0fdf4; border-color: #bbf7d0; }
+    .t-eval { background: #fef2f2; border-color: #fecaca; }
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: #fcfcfd;
+      border-radius: 10px;
+    }
+    .box {
+      rx: 10;
+      ry: 10;
+      stroke-width: 1.2;
+    }
+    .small {
+      font-size: 13px;
+      fill: #111827;
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 700;
+      fill: #111827;
+    }
+    .phase {
+      font-size: 16px;
+      font-weight: 700;
+      fill: #374151;
+    }
+    .note {
+      font-size: 13px;
+      color: #4b5563;
+    }
+    ul { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Quant RL MVP（SPY 日線）流程架構圖</h1>
+    <p class="subtitle">目標：先建立「可投資、有限資金、可回測、可重現」模擬系統，再接 RL 訓練與 ablation。</p>
+
+    <div class="panel">
+      <h2>圖例</h2>
+      <div class="legend">
+        <div class="tag t-data">資料層（Data）</div>
+        <div class="tag t-feature">特徵層（Feature）</div>
+        <div class="tag t-agent">Agent 層（Deterministic）</div>
+        <div class="tag t-sim">執行/模擬層（Execution + Accounting）</div>
+        <div class="tag t-train">訓練層（RL）</div>
+        <div class="tag t-eval">評估層（Backtest + Evaluation）</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>完整系統流程（由左至右）</h2>
+      <svg viewBox="0 0 1900 980" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quant RL MVP 系統流程架構圖">
+        <defs>
+          <marker id="arrow" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto">
+            <polygon points="0 0, 12 4, 0 8" fill="#6b7280" />
+          </marker>
+        </defs>
+
+        <!-- Phase labels -->
+        <text x="40" y="40" class="phase">A. 資料與Schema</text>
+        <text x="430" y="40" class="phase">B. 特徵建構</text>
+        <text x="820" y="40" class="phase">C. Agents</text>
+        <text x="1160" y="40" class="phase">D. 模擬交易環境</text>
+        <text x="1560" y="40" class="phase">E. 訓練與評估</text>
+
+        <!-- Data boxes -->
+        <rect class="box" x="30" y="70" width="320" height="120" fill="#ecfeff" stroke="#0ea5a4"/>
+        <text x="50" y="98" class="title">price_daily / indicator_daily</text>
+        <text x="50" y="124" class="small">- SPY OHLCV 清理、日期遞增、去重</text>
+        <text x="50" y="146" class="small">- VIX / US10Y / DXY 對齊交易日</text>
+        <text x="50" y="168" class="small">- 僅允許 ffill，避免未來資料</text>
+
+        <rect class="box" x="30" y="220" width="320" height="140" fill="#ecfeff" stroke="#0ea5a4"/>
+        <text x="50" y="248" class="title">news_raw</text>
+        <text x="50" y="274" class="small">- 合法來源擷取（財經/總經/政策）</text>
+        <text x="50" y="296" class="small">- 保留 published_at / fetched_at</text>
+        <text x="50" y="318" class="small">- 依 content_hash + published_at 去重</text>
+        <text x="50" y="340" class="small">- 可重跑一致（deterministic merge）</text>
+
+        <rect class="box" x="30" y="390" width="320" height="120" fill="#ecfeff" stroke="#0ea5a4"/>
+        <text x="50" y="418" class="title">schema 驗證（所有表）</text>
+        <text x="50" y="444" class="small">- 欄位/型別/主鍵/缺值規則</text>
+        <text x="50" y="466" class="small">- 保證可回測資料品質</text>
+
+        <!-- Feature boxes -->
+        <rect class="box" x="410" y="70" width="340" height="170" fill="#eef2ff" stroke="#4f46e5"/>
+        <text x="430" y="98" class="title">market features（TASK 006）</text>
+        <text x="430" y="124" class="small">return_1d/5d/20d, vol_5d/20d</text>
+        <text x="430" y="146" class="small">ma_gap_5_20 / ma_gap_20_60, RSI, MACD</text>
+        <text x="430" y="168" class="small">drawdown_20d, volume_change</text>
+        <text x="430" y="190" class="small">vix/yield/dxy level &amp; change</text>
+        <text x="430" y="212" class="small">全部只用歷史資料計算</text>
+
+        <rect class="box" x="410" y="270" width="340" height="170" fill="#eef2ff" stroke="#4f46e5"/>
+        <text x="430" y="298" class="title">news features（TASK 007）</text>
+        <text x="430" y="324" class="small">逐篇：sentiment / inflation / growth / policy</text>
+        <text x="430" y="346" class="small">逐篇：risk_on_off / confidence</text>
+        <text x="430" y="368" class="small">日聚合：news_count + 各均值 + weighted_confidence</text>
+        <text x="430" y="390" class="small">收盤後新聞 → 次日生效（時間切點）</text>
+
+        <rect class="box" x="410" y="470" width="340" height="120" fill="#eef2ff" stroke="#4f46e5"/>
+        <text x="430" y="498" class="title">feature_daily（TASK 008）</text>
+        <text x="430" y="524" class="small">價格 + 指標 + 新聞合併</text>
+        <text x="430" y="546" class="small">一日一列、無重複日期、缺值補值策略</text>
+
+        <!-- Agents boxes -->
+        <rect class="box" x="800" y="90" width="310" height="120" fill="#f5f3ff" stroke="#7c3aed"/>
+        <text x="820" y="118" class="title">MarketAgent</text>
+        <text x="820" y="144" class="small">trend / momentum / volatility / drawdown risk</text>
+        <text x="820" y="166" class="small">deterministic 映射（同輸入同輸出）</text>
+
+        <rect class="box" x="800" y="240" width="310" height="120" fill="#f5f3ff" stroke="#7c3aed"/>
+        <text x="820" y="268" class="title">MacroNewsAgent</text>
+        <text x="820" y="294" class="small">inflation / growth / policy / risk_on_off</text>
+        <text x="820" y="316" class="small">news_confidence</text>
+
+        <rect class="box" x="800" y="390" width="310" height="120" fill="#f5f3ff" stroke="#7c3aed"/>
+        <text x="820" y="418" class="title">RegimeAgent</text>
+        <text x="820" y="444" class="small">regime_label（bull/bear/neutral）</text>
+        <text x="820" y="466" class="small">regime_confidence</text>
+
+        <rect class="box" x="800" y="540" width="310" height="120" fill="#f5f3ff" stroke="#7c3aed"/>
+        <text x="820" y="568" class="title">RiskAgent + Risk Overlay</text>
+        <text x="820" y="594" class="small">raw action {-1,0,+1} → final action</text>
+        <text x="820" y="616" class="small">max long/short、high-vol 降曝險、停交易</text>
+        <text x="820" y="638" class="small">記錄 raw/final/risk flag</text>
+
+        <!-- Simulation boxes -->
+        <rect class="box" x="1150" y="90" width="360" height="180" fill="#fff7ed" stroke="#ea580c"/>
+        <text x="1170" y="118" class="title">TradingEnv（TASK 011）</text>
+        <text x="1170" y="144" class="small">決策：t 收盤後；成交：t+1 開盤</text>
+        <text x="1170" y="166" class="small">state = 市場 + 指標 + 新聞 + agents + portfolio</text>
+        <text x="1170" y="188" class="small">portfolio state: position/cash_ratio/pnl_ratio/</text>
+        <text x="1170" y="210" class="small">drawdown/turnover/days_in_position</text>
+        <text x="1170" y="232" class="small">reward = return - cost - turnover - dd - invalid</text>
+
+        <rect class="box" x="1150" y="300" width="360" height="180" fill="#fff7ed" stroke="#ea580c"/>
+        <text x="1170" y="328" class="title">Portfolio Accounting（TASK 010）</text>
+        <text x="1170" y="354" class="small">追蹤 cash/units/position/market_value</text>
+        <text x="1170" y="376" class="small">realized/unrealized pnl/equity/turnover/drawdown</text>
+        <text x="1170" y="398" class="small">有限資金約束、不可成交動作 clip/reject</text>
+        <text x="1170" y="420" class="small">每筆交易扣 fee + slippage（net performance）</text>
+
+        <rect class="box" x="1150" y="510" width="360" height="120" fill="#fff7ed" stroke="#ea580c"/>
+        <text x="1170" y="538" class="title">Environment Validation（TASK 016）</text>
+        <text x="1170" y="564" class="small">無 leakage / 成交時點正確 / 帳務正確</text>
+        <text x="1170" y="586" class="small">成本與 drawdown 正確 / infeasible action 處理正確</text>
+
+        <!-- Training / Eval boxes -->
+        <rect class="box" x="1550" y="90" width="320" height="130" fill="#f0fdf4" stroke="#16a34a"/>
+        <text x="1570" y="118" class="title">PPO Training（TASK 017）</text>
+        <text x="1570" y="144" class="small">train/valid/test 時間切分</text>
+        <text x="1570" y="166" class="small">固定 seed / checkpoint / valid 紀錄</text>
+        <text x="1570" y="188" class="small">完成後在 test set 推論</text>
+
+        <rect class="box" x="1550" y="250" width="320" height="130" fill="#fef2f2" stroke="#dc2626"/>
+        <text x="1570" y="278" class="title">Benchmark + Backtest（TASK 013/014）</text>
+        <text x="1570" y="304" class="small">Buy&amp;Hold / MA / rule-based</text>
+        <text x="1570" y="326" class="small">與 RL 共用 execution + 成本假設</text>
+        <text x="1570" y="348" class="small">輸出可重算績效的 backtest_log</text>
+
+        <rect class="box" x="1550" y="410" width="320" height="150" fill="#fef2f2" stroke="#dc2626"/>
+        <text x="1570" y="438" class="title">Evaluation + Ablation（TASK 015/018）</text>
+        <text x="1570" y="464" class="small">指標：cumret/CAGR/Sharpe/MDD/turnover/trades</text>
+        <text x="1570" y="486" class="small">建議：Sortino/Calmar/ann.vol</text>
+        <text x="1570" y="508" class="small">Ablation: price-only → full system</text>
+        <text x="1570" y="530" class="small">只改指定變數，其餘條件固定</text>
+
+        <rect class="box" x="1550" y="590" width="320" height="120" fill="#fef2f2" stroke="#dc2626"/>
+        <text x="1570" y="618" class="title">Final Report（TASK 019）</text>
+        <text x="1570" y="644" class="small">資料期間、成本假設、benchmark vs RL</text>
+        <text x="1570" y="666" class="small">ablation 結果與已知限制</text>
+
+        <!-- Arrows main -->
+        <line x1="350" y1="150" x2="410" y2="150" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+        <line x1="750" y1="530" x2="800" y2="600" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+        <line x1="1110" y1="600" x2="1150" y2="600" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+        <line x1="1510" y1="160" x2="1550" y2="160" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <!-- Detailed connectors -->
+        <line x1="350" y1="290" x2="410" y2="355" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+        <line x1="350" y1="450" x2="410" y2="530" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+        <line x1="750" y1="150" x2="800" y2="150" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+        <line x1="750" y1="355" x2="800" y2="300" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+        <line x1="750" y1="530" x2="800" y2="450" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+        <line x1="1110" y1="150" x2="1150" y2="170" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+        <line x1="1110" y1="600" x2="1150" y2="380" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+        <line x1="1510" y1="380" x2="1550" y2="315" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+        <line x1="1510" y1="570" x2="1550" y2="485" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+        <line x1="1710" y1="220" x2="1710" y2="250" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+        <line x1="1710" y1="380" x2="1710" y2="410" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+        <line x1="1710" y1="560" x2="1710" y2="590" stroke="#9ca3af" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+        <!-- Feedback loop -->
+        <path d="M 1550 315 C 1380 315, 1330 250, 1210 250" fill="none" stroke="#ef4444" stroke-width="1.8" stroke-dasharray="8 6" marker-end="url(#arrow)"/>
+        <text x="1320" y="285" class="small">回測/評估結果回饋至策略與特徵設計</text>
+      </svg>
+    </div>
+
+    <div class="panel">
+      <h2>方法論（Methodology）重點</h2>
+      <ul>
+        <li><strong>先環境後模型：</strong>先驗證 accounting/execution/leakage，再進入 PPO 訓練。</li>
+        <li><strong>交易可執行性：</strong>有限資金、不可成交動作可裁切/拒絕，並完整記錄。</li>
+        <li><strong>一致性：</strong>Benchmark 與 RL 使用完全相同成交與成本假設。</li>
+        <li><strong>可重現：</strong>固定 seed、時間切分、checkpoint、可重跑 backtest log。</li>
+        <li><strong>可解釋：</strong>新聞先結構化，再進 agents 與 RL，避免 raw-text-to-trade。</li>
+      </ul>
+      <p class="note">建議：以瀏覽器直接開啟此檔案（`architecture_flow.html`）即可檢視完整流程圖。</p>
+    </div>
+  </div>
+</body>
+</html>
